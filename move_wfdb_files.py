@@ -5,13 +5,21 @@ import argparse
 
 def main():
     # Parse command line arguments
-    parser = argparse.ArgumentParser(description='Move half of WFDB file pairs (.hea and .dat) from source to destination directory.')
+    parser = argparse.ArgumentParser(description='Move a percentage of WFDB file pairs (.hea and .dat) from source to destination directory.')
     parser.add_argument('source_dir', help='Source directory containing .hea and .dat files')
     parser.add_argument('dest_dir', help='Destination directory for moved files')
+    parser.add_argument('--percentage', '-p', type=float, default=50.0, 
+                        help='Percentage of files to move (default: 50.0)')
     args = parser.parse_args()
     
     source_dir = args.source_dir
     dest_dir = args.dest_dir
+    percentage = args.percentage
+    
+    # Validate percentage
+    if percentage <= 0 or percentage > 100:
+        print("Error: Percentage must be between 0 and 100")
+        return
     
     # Ensure destination directory exists
     os.makedirs(dest_dir, exist_ok=True)
@@ -31,8 +39,9 @@ def main():
         print("No valid .hea/.dat file pairs found in the source directory.")
         return
     
-    # Select half of the pairs randomly
-    num_to_move = max(1, len(valid_pairs) // 2)
+    # Select percentage of the pairs randomly
+    num_to_move = max(1, int(len(valid_pairs) * (percentage / 100)))
+    num_to_move = min(num_to_move, len(valid_pairs))  # Ensure we don't exceed total pairs
     pairs_to_move = random.sample(valid_pairs, num_to_move)
     
     # Move the selected pairs
@@ -46,7 +55,7 @@ def main():
         except Exception as e:
             print(f"Error moving {hea_file}/{dat_file}: {e}")
     
-    print(f"\nMoved {moved_count} file pairs out of {len(valid_pairs)} total pairs.")
+    print(f"\nMoved {moved_count} file pairs ({percentage}%) out of {len(valid_pairs)} total pairs.")
     print(f"Source directory: {source_dir}")
     print(f"Destination directory: {dest_dir}")
 
