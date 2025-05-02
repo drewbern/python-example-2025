@@ -10,12 +10,12 @@
 #SBATCH -J train_model        # Job name
 #SBATCH -o train_model.o%j    # Name of stdout output file
 #SBATCH -e train_model.e%j    # Name of stderr error file
-#SBATCH -p normal              # Queue (partition) name
+#SBATCH -p normal             # Queue (partition) name
 #SBATCH -N 4                  # Total # of nodes (4 nodes = 512 cores)
 #SBATCH -n 4                  # Total # of MPI tasks (1 per node)
-#SBATCH -t 02:00:00           # Run time (hh:mm:ss)
+#SBATCH -t 01:00:00           # Run time (hh:mm:ss)
 #SBATCH --mail-type=all       # Send email at begin and end of job
-#SBATCH -A <YOUR_PROJECT_ID>  # Project/Allocation name (REPLACE THIS)
+#SBATCH -A ASC25017           # Project/Allocation name 
 
 # Any other commands must follow all #SBATCH directives...
 module list
@@ -39,7 +39,7 @@ NODE_ID=$SLURM_PROCID
 START_PERCENT=$(($NODE_ID * $DATA_PERCENTAGE))
 
 # Launch distributed training
-ibrun -np 1 python3 train_node.py -d $SCRATCH/training_data -m $SCRATCH/model_node${NODE_ID} -v -p $START_PERCENT -t $DATA_PERCENTAGE
+ibrun -np 1 python3 train_node.py -d $SCRATCH/mysharedirectory/training_data -m $SCRATCH/model_node${NODE_ID} -v -p $START_PERCENT -t $DATA_PERCENTAGE
 
 # Wait for all processes to complete
 wait
