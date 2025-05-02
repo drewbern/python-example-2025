@@ -66,9 +66,12 @@ def train_model(data_folder, model_folder, verbose):
     max_leaf_nodes = 34  # Maximum number of leaf nodes in each tree.
     random_state = 56  # Random state; set for reproducibility.
 
-    # Fit the model.
+    # Fit the model - use all available cores
     model = RandomForestClassifier(
-        n_estimators=n_estimators, max_leaf_nodes=max_leaf_nodes, random_state=random_state).fit(features, labels)
+        n_estimators=n_estimators, 
+        max_leaf_nodes=max_leaf_nodes, 
+        random_state=random_state,
+        n_jobs=-1).fit(features, labels)  # -1 means use all available cores
 
     # Create a folder for the model if it does not already exist.
     os.makedirs(model_folder, exist_ok=True)
