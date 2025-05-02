@@ -72,14 +72,21 @@ def evaluate_model(data_folder, output_folder, verbose=False, ignore_missing=Fal
             binary_outputs.append(0 if is_nan(binary_output) else binary_output)
             probability_outputs.append(0 if is_nan(probability_output) else probability_output)
             
+            # Print successful evaluation
+            if verbose:
+                print(f"Successfully evaluated record {i+1}/{num_records}: {record}")
+            
         except Exception as e:
             if verbose:
                 print(f"Error processing record {record}: {str(e)}")
             if not ignore_missing:
                 raise
 
-    if verbose and skipped_records:
-        print(f"Skipped {len(skipped_records)} records due to missing labels or outputs")
+    if verbose:
+        successful_count = len(labels)
+        print(f"Successfully evaluated {successful_count} out of {num_records} records")
+        if skipped_records:
+            print(f"Skipped {len(skipped_records)} records due to missing labels or outputs")
     
     if len(labels) == 0:
         raise ValueError("No valid records found with labels for evaluation")
