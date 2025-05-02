@@ -54,12 +54,21 @@ def check_and_create_dirs(base_dir):
     
     if not os.path.exists(holdout_dir):
         os.makedirs(holdout_dir)
+    
+    # Create dataset-specific subdirectories
+    for subdir in ['code15', 'ptbxl', 'samitrop']:
+        os.makedirs(os.path.join(training_dir, subdir), exist_ok=True)
+        os.makedirs(os.path.join(holdout_dir, subdir), exist_ok=True)
         
     return all_datasets_dir, training_dir, holdout_dir
 
 def process_code15_output(src_dir, train_dir, holdout_dir, force=False):
     """Process code15_output directory with exams_partX subdirectories"""
     print(f"Processing CODE-15% dataset...")
+    
+    # Create code15 subdirectories
+    train_code15_dir = os.path.join(train_dir, 'code15')
+    holdout_code15_dir = os.path.join(holdout_dir, 'code15')
     
     # Check for exam_part directories
     exam_parts = [d for d in os.listdir(src_dir) if d.startswith('exams_part')]
@@ -70,69 +79,55 @@ def process_code15_output(src_dir, train_dir, holdout_dir, force=False):
     csv_file = os.path.join(src_dir, 'code15_chagas_labels.csv')
     if os.path.exists(csv_file):
         # Copy (not move) the CSV file since it needs to be in both directories
-        shutil.copy2(csv_file, train_dir)
-        shutil.copy2(csv_file, holdout_dir)
+        shutil.copy2(csv_file, train_code15_dir)
+        shutil.copy2(csv_file, holdout_code15_dir)
         print(f"Copied code15_chagas_labels.csv to both directories")
     else:
         print(f"Warning: code15_chagas_labels.csv not found in {src_dir}")
     
-    # Process each exams_part directory
-    all_records = []
+    # Process each exams_part directory - collect all files without pair verification
+    all_files = []
     for part_dir in exam_parts:
         part_path = os.path.join(src_dir, part_dir)
         if os.path.isdir(part_path):
-            # Get all unique record IDs (without extensions)
-            records = set()
             for file in os.listdir(part_path):
-                base_name = os.path.splitext(file)[0]
-                if os.path.isfile(os.path.join(part_path, file)) and (file.endswith('.dat') or file.endswith('.hea')):
-                    records.add(base_name)
-            
-            # Check each record for both .hea and .dat files
-            for record in records:
-                hea_file = os.path.join(part_path, f"{record}.hea")
-                dat_file = os.path.join(part_path, f"{record}.dat")
-                
-                if os.path.exists(hea_file) and os.path.exists(dat_file):
-                    all_records.append((record, part_dir, hea_file, dat_file))
-                else:
-                    print(f"Warning: Record {record} in {part_dir} is missing a file:")
-                    if not os.path.exists(hea_file):
-                        print(f"  - Missing {hea_file}")
-                    if not os.path.exists(dat_file):
-                        print(f"  - Missing {dat_file}")
+                if file.endswith('.hea') or file.endswith('.dat'):
+                    all_files.append((file, part_dir, os.path.join(part_path, file)))
+
+    # Split files between training and holdout (keeping same partition for file pairs)
+    base_names = {os.path.splitext(f[0])[0] for f in all_files}
+    random.shuffle(list(base_names))
+    split_idx = int(len(base_names) * 0.8)
     
-    # Split records between training and holdout
-    random.shuffle(all_records)
-    split_idx = int(len(all_records) * 0.8)
-    train_records = all_records[:split_idx]
-    holdout_records = all_records[split_idx:]
+    train_bases = list(base_names)[:split_idx]
+    holdout_bases = list(base_names)[split_idx:]
     
-    # Move files to training directory
-    for record, part_dir, hea_file, dat_file in train_records:
-        # Create part directory in training if it doesn't exist
-        train_part_dir = os.path.join(train_dir, part_dir)
-        os.makedirs(train_part_dir, exist_ok=True)
+    # Move files to training or holdout directories based on their base name
+    for file, part_dir, file_path in all_files:
+        base_name = os.path.splitext(file)[0]
         
-        # Move files instead of copying
-        shutil.move(hea_file, train_part_dir)
-        shutil.move(dat_file, train_part_dir)
-    
-    # Move files to holdout directory
-    for record, part_dir, hea_file, dat_file in holdout_records:
-        # Create part directory in holdout if it doesn't exist
-        holdout_part_dir = os.path.join(holdout_dir, part_dir)
-        os.makedirs(holdout_part_dir, exist_ok=True)
+        # Create part directory in destination if it doesn't exist
+        if base_name in train_bases:
+            dest_part_dir = os.path.join(train_code15_dir, part_dir)
+            os.makedirs(dest_part_dir, exist_ok=True)
+            dest_path = os.path.join(dest_part_dir, file)
+        else:
+            dest_part_dir = os.path.join(holdout_code15_dir, part_dir)
+            os.makedirs(dest_part_dir, exist_ok=True)
+            dest_path = os.path.join(dest_part_dir, file)
         
-        # Move files instead of copying
-        shutil.move(hea_file, holdout_part_dir)
-        shutil.move(dat_file, holdout_part_dir)
+        # Move the file
+        shutil.move(file_path, dest_path)
     
-    print(f"CODE-15% dataset: Moved {len(train_records)} records to training and {len(holdout_records)} records to holdout")
+    print(f"CODE-15% dataset: Moved {len(train_bases)} records to training and {len(holdout_bases)} records to holdout")
     
 def process_ptbxl_output(src_dir, train_dir, holdout_dir, force=False):
     """Process ptbxl_output directory with numbered subdirectories"""
     print(f"Processing PTB-XL dataset...")
+    
+    # Create ptbxl subdirectories
+    train_ptbxl_dir = os.path.join(train_dir, 'ptbxl')
+    holdout_ptbxl_dir = os.path.join(holdout_dir, 'ptbxl')
     
     # Find all numbered directories (00000, 01000, etc.)
     subdirs = [d for d in os.listdir(src_dir) if os.path.isdir(os.path.join(src_dir, d)) and d.isdigit()]
@@ -177,7 +172,7 @@ def process_ptbxl_output(src_dir, train_dir, holdout_dir, force=False):
     # Move files to training directory
     for record, subdir, hea_file, dat_file in train_records:
         # Create subdir in training if it doesn't exist
-        train_subdir = os.path.join(train_dir, subdir)
+        train_subdir = os.path.join(train_ptbxl_dir, subdir)
         os.makedirs(train_subdir, exist_ok=True)
         
         # Move files instead of copying
@@ -193,7 +188,7 @@ def process_ptbxl_output(src_dir, train_dir, holdout_dir, force=False):
     # Move files to holdout directory
     for record, subdir, hea_file, dat_file in holdout_records:
         # Create subdir in holdout if it doesn't exist
-        holdout_subdir = os.path.join(holdout_dir, subdir)
+        holdout_subdir = os.path.join(holdout_ptbxl_dir, subdir)
         os.makedirs(holdout_subdir, exist_ok=True)
         
         # Move files instead of copying
@@ -212,11 +207,15 @@ def process_samitrop_output(src_dir, train_dir, holdout_dir, force=False):
     """Process samitrop_output directory with files directly in the directory"""
     print(f"Processing SaMi-Trop dataset...")
     
+    # Create samitrop subdirectories
+    train_samitrop_dir = os.path.join(train_dir, 'samitrop')
+    holdout_samitrop_dir = os.path.join(holdout_dir, 'samitrop')
+    
     # Copy CSV file to both directories
     csv_file = os.path.join(src_dir, 'samitrop_chagas_labels.csv')
     if os.path.exists(csv_file):
-        shutil.copy2(csv_file, train_dir)
-        shutil.copy2(csv_file, holdout_dir)
+        shutil.copy2(csv_file, train_samitrop_dir)
+        shutil.copy2(csv_file, holdout_samitrop_dir)
         print(f"Copied samitrop_chagas_labels.csv to both directories")
     else:
         print(f"Warning: samitrop_chagas_labels.csv not found in {src_dir}")
@@ -256,13 +255,13 @@ def process_samitrop_output(src_dir, train_dir, holdout_dir, force=False):
     
     # Move files to training directory
     for record, hea_file, dat_file in train_records:
-        shutil.move(hea_file, train_dir)
-        shutil.move(dat_file, train_dir)
+        shutil.move(hea_file, os.path.join(train_samitrop_dir, f"{record}.hea"))
+        shutil.move(dat_file, os.path.join(train_samitrop_dir, f"{record}.dat"))
     
     # Move files to holdout directory
     for record, hea_file, dat_file in holdout_records:
-        shutil.move(hea_file, holdout_dir)
-        shutil.move(dat_file, holdout_dir)
+        shutil.move(hea_file, os.path.join(holdout_samitrop_dir, f"{record}.hea"))
+        shutil.move(dat_file, os.path.join(holdout_samitrop_dir, f"{record}.dat"))
     
     print(f"SaMi-Trop dataset: Moved {len(train_records)} records to training and {len(holdout_records)} records to holdout")
 
