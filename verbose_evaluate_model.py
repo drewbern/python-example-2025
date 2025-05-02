@@ -106,9 +106,8 @@ def evaluate_model(data_folder, output_folder, verbose=False, ignore_missing=Fal
     confusion_matrix = compute_confusion_matrix(labels, binary_outputs)
     if verbose:
         print("\nConfusion Matrix:")
-        print("[TP  FP]")
-        print("[FN  TN]")
-        print(confusion_matrix)
+        print(f"[TP={confusion_matrix[0,0]}  FP={confusion_matrix[0,1]}]")
+        print(f"[FN={confusion_matrix[1,0]}  TN={confusion_matrix[1,1]}]")
         print(f"True Positives: {confusion_matrix[0,0]}")
         print(f"False Positives: {confusion_matrix[0,1]}")
         print(f"False Negatives: {confusion_matrix[1,0]}")
