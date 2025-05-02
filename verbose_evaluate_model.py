@@ -102,13 +102,25 @@ def evaluate_model(data_folder, output_folder, verbose=False, ignore_missing=Fal
     accuracy = compute_accuracy(labels, binary_outputs)
     f_measure = compute_f_measure(labels, binary_outputs)
 
-    return challenge_score, auroc, auprc, accuracy, f_measure, len(skipped_records)
+    # Compute and print the confusion matrix
+    confusion_matrix = compute_confusion_matrix(labels, binary_outputs)
+    if verbose:
+        print("\nConfusion Matrix:")
+        print("[TP  FP]")
+        print("[FN  TN]")
+        print(confusion_matrix)
+        print(f"True Positives: {confusion_matrix[0,0]}")
+        print(f"False Positives: {confusion_matrix[0,1]}")
+        print(f"False Negatives: {confusion_matrix[1,0]}")
+        print(f"True Negatives: {confusion_matrix[1,1]}")
+
+    return challenge_score, auroc, auprc, accuracy, f_measure, len(skipped_records), confusion_matrix
 
 # Run the code.
 def run(args):
     # Compute the scores for the model outputs.
     try:
-        challenge_score, auroc, auprc, accuracy, f_measure, skipped = evaluate_model(
+        challenge_score, auroc, auprc, accuracy, f_measure, skipped, confusion_matrix = evaluate_model(
             args.data_folder, args.output_folder, args.verbose, args.ignore_missing)
 
         output_string = \
@@ -117,6 +129,11 @@ def run(args):
             f'AUPRC: {auprc:.3f}\n' + \
             f'Accuracy: {accuracy:.3f}\n' \
             f'F-measure: {f_measure:.3f}\n'
+        
+# Add confusion matrix to output
+        output_string += f'\nConfusion Matrix:\n'
+        output_string += f'[TP={confusion_matrix[0,0]}  FP={confusion_matrix[0,1]}]\n'
+        output_string += f'[FN={confusion_matrix[1,0]}  TN={confusion_matrix[1,1]}]\n'
         
         if skipped > 0:
             output_string += f'Skipped records: {skipped}\n'
